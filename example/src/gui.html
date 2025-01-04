@@ -15,6 +15,8 @@
     body {
       font-family: -apple-system, BlinkMacSystemFont, avenir next, avenir, segoe ui, helvetica neue, helvetica, Cantarell, Ubuntu, roboto, noto, arial, sans-serif;
       overflow: hidden;
+      font-size: x-small;
+      padding: 1rem;
       background: rgb(150, 150, 150);
     }
 
@@ -46,8 +48,9 @@
     </svg>
   </div>
 
+  <h2>Log</h2>
   <pre>
-
+|
   </pre>
 
   <script>
@@ -60,11 +63,22 @@
       sendToPlugin({ type: 'SetGain', value: Number(e.target.value) });
     });
 
+
+
     window.onPluginMessage = msg => {
       switch (msg.type) {
         case 'param_change': {
-          slider.value = msg.value;
-          document.querySelector('.value-display').textContent = msg.text;
+          if (msg.name === 'gain') {
+            slider.value = msg.value;
+            document.querySelector('.value-display').textContent = msg.text;
+          }
+          break;
+        }
+        case 'persisted': {
+          if (msg.name === 'keyPresses') {
+            keyPresses = msg.value;
+            log.textContent = `key_presses: ${keyPresses}`;
+          }
           break;
         }
         case 'set_size': {
@@ -72,12 +86,14 @@
           size.height = msg.height;
           break;
         }
+        default: break;
       }
     };
 
     let cornerResizeMouseDown = false;
     let startPos = { x: 0, y: 0 };
     let startSize = { ...size };
+    let keyPresses = 0;
 
     document.querySelector('.corner-resize').addEventListener('mousedown', e => {
       cornerResizeMouseDown = true;
@@ -103,16 +119,23 @@
     });
 
     const log = document.querySelector('pre');
-    let n = 0;
+
     window.addEventListener('keydown', e => {
-      log.textContent = `keydown: ${e.key} (${n++})`;
+      log.textContent = `keydown: ${e.key} (${keyPresses++})`;
+      sendToPlugin({ type: 'SetKeyPresses',  value: keyPresses });
     });
 
     window.addEventListener('keyup', e => {
-      log.textContent = `keyup: ${e.key} (${n++})`;
+      log.textContent = `keyup: ${e.key}`;
     });
 
-    sendToPlugin({ type: 'Init' });
+    // Send the init message when the DOM is fully loaded
+    document.addEventListener('DOMContentLoaded', () => {
+      sendToPlugin({ type: 'Init' });
+      console.log('DOMContentLoaded calling PersistedStateForUI');
+      sendToPlugin({ type: 'PersistedStateForUI' });
+    });
+
   </script>
 </body>
 </html>

@@ -1,10 +1,13 @@
+#![feature(lock_value_accessors)]
+
 // Forked and modified from: https://github.com/robbert-vdh/nih-plug/tree/master/plugins/examples/gain
 use nih_plug::prelude::*;
 use nih_plug_webview::*;
 use serde::Deserialize;
 use serde_json::json;
 use std::sync::atomic::{AtomicBool, Ordering};
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
+
 
 struct Gain {
     params: Arc<GainParams>,
@@ -14,15 +17,21 @@ struct Gain {
 #[serde(tag = "type")]
 enum Action {
     Init,
-    ReadCurrent,
     SetSize { width: u32, height: u32 },
     SetGain { value: f32 },
+    PersistedStateForUI {},
+    SetKeyPresses { value: u32 },
 }
 
 #[derive(Params)]
 struct GainParams {
+
     #[id = "gain"]
     pub gain: FloatParam,
+
+    #[persist = "keyPresses"]
+    pub key_presses: Mutex<i32> ,
+
     gain_value_changed: Arc<AtomicBool>,
 }
 
@@ -44,6 +53,7 @@ impl Default for GainParams {
         });
 
         Self {
+
             gain: FloatParam::new(
                 "Gain",
                 util::db_to_gain(0.0),
@@ -58,22 +68,20 @@ impl Default for GainParams {
             .with_value_to_string(formatters::v2s_f32_gain_to_db(2))
             .with_string_to_value(formatters::s2v_f32_gain_to_db())
             .with_callback(param_callback.clone()),
+
+            key_presses: Mutex::new(i32::default()).into(),
             gain_value_changed,
         }
     }
 }
 
 impl Plugin for Gain {
-    type BackgroundTask = ();
-    type SysExMessage = ();
-
     const NAME: &'static str = "Gain";
     const VENDOR: &'static str = "Moist Plugins GmbH";
-    const URL: &'static str = "https://youtu.be/dQw4w9WgXcQ";
+
+    const URL: &'static str = "";
     const EMAIL: &'static str = "info@example.com";
-
     const VERSION: &'static str = "0.0.1";
-
     const AUDIO_IO_LAYOUTS: &'static [AudioIOLayout] = &[
         AudioIOLayout {
             main_input_channels: NonZeroU32::new(2),
@@ -90,33 +98,20 @@ impl Plugin for Gain {
     ];
 
     const MIDI_INPUT: MidiConfig = MidiConfig::None;
+
     const SAMPLE_ACCURATE_AUTOMATION: bool = true;
+
+    type SysExMessage = ();
+    type BackgroundTask = ();
 
     fn params(&self) -> Arc<dyn Params> {
         self.params.clone()
     }
 
-    fn process(
-        &mut self,
-        buffer: &mut Buffer,
-        _aux: &mut AuxiliaryBuffers,
-        _context: &mut impl ProcessContext<Self>,
-    ) -> ProcessStatus {
-        for channel_samples in buffer.iter_samples() {
-            let gain = self.params.gain.smoothed.next();
-
-            for sample in channel_samples {
-                *sample *= gain;
-            }
-        }
-
-        ProcessStatus::Normal
-    }
-
     fn editor(&mut self, _async_executor: AsyncExecutor<Self>) -> Option<Box<dyn Editor>> {
         let params = self.params.clone();
         let gain_value_changed = self.params.gain_value_changed.clone();
-        let editor = WebViewEditor::new(HTMLSource::String(include_str!("gui.html")), (200, 200))
+        let editor = WebViewEditor::new(HTMLSource::String(include_str!("gui.html")), (400, 200))
             .with_background_color((150, 150, 150, 255))
             .with_developer_mode(true)
             .with_keyboard_handler(move |event| {
@@ -156,20 +151,31 @@ impl Plugin for Gain {
                             Action::SetSize { width, height } => {
                                 ctx.resize(window, width, height);
                             }
-                            Action::ReadCurrent => {
-                                ctx.send_json(json!({
-                                    "type": "param_change",
-                                    "param": "gain",
-                                    "value": params.gain.unmodulated_normalized_value(),
-                                    "text": params.gain.to_string()
-                                }));
-                            }
                             Action::Init => {
                                 ctx.send_json(json!({
                                     "type": "set_size",
                                     "width": ctx.width.load(Ordering::Relaxed),
                                     "height": ctx.height.load(Ordering::Relaxed)
                                 }));
+                            }
+                            Action::PersistedStateForUI {} => {
+                                // need to do one by one, as our params are wrapped in Arc
+                                ctx.send_json(json!({
+                                    "type": "param_change",
+                                    "name": "gain",
+                                    "value": params.gain.unmodulated_normalized_value(),
+                                    "text": params.gain.to_string()
+                                }));
+                                ctx.send_json(json!({
+                                    "type": "persisted",
+                                    "name": "keyPresses",
+                                    "value": params.key_presses,
+                                    "text": "key presses:"
+                                }));
+                            }
+                            Action::SetKeyPresses { value } => {
+                                nih_log!("KeyPresses: {}", value);
+                                params.key_presses.set(value as i32).unwrap();
                             }
                         }
                     } else {
@@ -180,14 +186,31 @@ impl Plugin for Gain {
                 if gain_value_changed.swap(false, Ordering::Relaxed) {
                     ctx.send_json(json!({
                         "type": "param_change",
-                        "param": "gain",
-                        "value": params.gain.unmodulated_normalized_value(),
+                        "name": "gain",
+                        "value": params.gain.modulated_normalized_value(),
                         "text": params.gain.to_string()
                     }));
                 }
             });
 
         Some(Box::new(editor))
+    }
+
+    fn process(
+        &mut self,
+        buffer: &mut Buffer,
+        _aux: &mut AuxiliaryBuffers,
+        _context: &mut impl ProcessContext<Self>,
+    ) -> ProcessStatus {
+        for channel_samples in buffer.iter_samples() {
+            let gain = self.params.gain.smoothed.next();
+
+            for sample in channel_samples {
+                *sample *= gain;
+            }
+        }
+
+        ProcessStatus::Normal
     }
 
     fn deactivate(&mut self) {}
