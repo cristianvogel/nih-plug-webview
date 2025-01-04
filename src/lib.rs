@@ -272,9 +272,9 @@ impl Editor for WebViewEditor {
         return false;
     }
 
-    fn param_values_changed(&self) {}
-
     fn param_value_changed(&self, _id: &str, _normalized_value: f32) {}
 
     fn param_modulation_changed(&self, _id: &str, _modulation_offset: f32) {}
+
+    fn param_values_changed(&self) {}
 }

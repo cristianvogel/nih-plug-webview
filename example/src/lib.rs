@@ -14,6 +14,7 @@ struct Gain {
 #[serde(tag = "type")]
 enum Action {
     Init,
+    ReadCurrent,
     SetSize { width: u32, height: u32 },
     SetGain { value: f32 },
 }
@@ -154,6 +155,14 @@ impl Plugin for Gain {
                             }
                             Action::SetSize { width, height } => {
                                 ctx.resize(window, width, height);
+                            }
+                            Action::ReadCurrent => {
+                                ctx.send_json(json!({
+                                    "type": "param_change",
+                                    "param": "gain",
+                                    "value": params.gain.unmodulated_normalized_value(),
+                                    "text": params.gain.to_string()
+                                }));
                             }
                             Action::Init => {
                                 ctx.send_json(json!({
