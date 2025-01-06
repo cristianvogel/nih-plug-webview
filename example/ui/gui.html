@@ -15,9 +15,10 @@
     body {
       font-family: -apple-system, BlinkMacSystemFont, avenir next, avenir, segoe ui, helvetica neue, helvetica, Cantarell, Ubuntu, roboto, noto, arial, sans-serif;
       overflow: hidden;
-      font-size: x-small;
+      font-size: 1rem;
       padding: 1rem;
-      background: rgb(150, 150, 150);
+      background: rgb(30,30,30);
+      color: antiquewhite;
     }
 
     .corner-resize {
@@ -37,9 +38,13 @@
   </style>
 </head>
 <body>
-
+  <div>
+    <img src="./assets/logo.png" width="300px" alt="logo"/>
+  </div>
   Gain:
-  <input style="margin: 1rem;" class="slider" type="range" min="0" max="1" step="0.01" />
+  <label>
+    <input style="margin: 1rem;" class="slider" type="range" min="0" max="1" step="0.01" />
+  </label>
   <span class="value-display"></span>
 
   <div class="corner-resize">

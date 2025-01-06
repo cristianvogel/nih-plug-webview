@@ -3,3 +3,4 @@ example/target
 .DS_Store
 .vscode
 test.sh
+/example/src/dist/

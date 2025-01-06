@@ -13,3 +13,4 @@ nih_plug = { git = "https://github.com/robbert-vdh/nih-plug.git", features = ["a
 nih_plug_webview = { path = ".." }
 serde = { version = "1.0.152", features = ["derive"] }
 serde_json = "1.0"
+include_dir = "0.7.4"

@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>NEL-scape|space</title>
+
+    <style>
+        body {
+            margin: 0;
+            background-color: #000;
+            color: #ddd;
+            font-family: Helvetica, Arial, sans-serif;
+            overflow: hidden; /* disable scrolling / rubberband effect on mobile */
+            height: 100vh;
+        }
+
+        canvas {
+            display: block;
+            position: absolute;
+            outline: 0;
+
+        }
+
+        * {
+            /* disable on touch highlights of html elements, especially on mobile! */
+            -webkit-tap-highlight-color: transparent;
+            -webkit-user-select: none; /* Safari */
+            user-select: none;
+        }
+    </style>
+
+    <meta charset="utf-8" />
+    <script type="text/javascript" src="webview://libs.core.js"></script>
+    <script type="text/javascript" src="webview://cables.js"></script>
+    <script type="text/javascript" src="webview://ops.js"></script>
+    <script type="text/javascript" src="webview://vargetset.js"></script>
+    <script type="text/javascript" src="webview://cgl_shadermodifier.js"></script>
+    <script type="text/javascript" src="webview://cgl_copytexture.js"></script>
+</head>
+<body>
+
+<div id="app"></div>
+<script type="module" src="./src/main.ts" async="true"></script>
+</body>
+</html>

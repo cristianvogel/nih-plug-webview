@@ -7,7 +7,10 @@ use serde::Deserialize;
 use serde_json::json;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};
+use include_dir::{include_dir, Dir};
+use nih_plug_webview::http::Response;
 
+static WEB_ASSETS: Dir<'_> = include_dir!("/Users/cristianvogel/Desktop/Programming/rust-wv-plugin/example/src/dist/cables-ui/js");
 
 struct Gain {
     params: Arc<GainParams>,
@@ -111,7 +114,25 @@ impl Plugin for Gain {
     fn editor(&mut self, _async_executor: AsyncExecutor<Self>) -> Option<Box<dyn Editor>> {
         let params = self.params.clone();
         let gain_value_changed = self.params.gain_value_changed.clone();
-        let editor = WebViewEditor::new(HTMLSource::String(include_str!("gui.html")), (400, 200))
+        let editor = WebViewEditor::new(HTMLSource::String(include_str!("dist/index.html")), (800, 600))
+            .with_custom_protocol("webview".to_owned(), |req| {
+                if let Some(file) = WEB_ASSETS.get_file(req.uri().path().trim_start_matches("/")) {
+                    return Response::builder()
+                        .header(
+                            "content-type",
+                            match file.path().extension().unwrap().to_str().unwrap() {
+                                "js" => "text/javascript",
+                                "css" => "text/css",
+                                "ttf" => "font/ttf",
+                                _ => "",
+                            },
+                        )
+                        .header("Access-Control-Allow-Origin", "*")
+                        .body(file.contents().into())
+                        .map_err(Into::into);
+                }
+                panic!("Web asset not found.")
+            })
             .with_background_color((150, 150, 150, 255))
             .with_developer_mode(true)
             .with_keyboard_handler(move |event| {
