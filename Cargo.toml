@@ -15,7 +15,6 @@ members = [
 
 [dependencies]
 nih_plug = { git = "https://github.com/robbert-vdh/nih-plug.git" }
-parking_lot = "0.12.1"
 serde_json = "1.0"
 wry = { version = "0.35.1" }
 baseview = { git = "https://github.com/RustAudio/baseview" }

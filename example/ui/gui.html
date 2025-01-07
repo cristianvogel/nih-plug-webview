@@ -39,7 +39,7 @@
 </head>
 <body>
   <div>
-    <img src="./assets/logo.png" width="300px" alt="logo"/>
+
   </div>
   Gain:
   <label>
@@ -137,8 +137,8 @@
     // Send the init message when the DOM is fully loaded
     document.addEventListener('DOMContentLoaded', () => {
       sendToPlugin({ type: 'Init' });
-      console.log('DOMContentLoaded calling PersistedStateForUI');
-      sendToPlugin({ type: 'PersistedStateForUI' });
+      console.log('DOMContentLoaded calling requesting persisted state');
+      sendToPlugin({ type: 'RequestPersistedStateForUI' });
     });
 
   </script>

@@ -1,4 +1,3 @@
-#![feature(lock_value_accessors)]
 
 // Forked and modified from: https://github.com/robbert-vdh/nih-plug/tree/master/plugins/examples/gain
 use nih_plug::prelude::*;
@@ -6,11 +5,12 @@ use nih_plug_webview::*;
 use serde::Deserialize;
 use serde_json::json;
 use std::sync::atomic::{AtomicBool, Ordering};
-use std::sync::{Arc, Mutex};
+use std::sync::{Arc};
+use parking_lot::Mutex;
 use include_dir::{include_dir, Dir};
 use nih_plug_webview::http::Response;
 
-static WEB_ASSETS: Dir<'_> = include_dir!("/Users/cristianvogel/Desktop/Programming/rust-wv-plugin/example/src/dist/cables-ui/js");
+static WEB_ASSETS: Dir<'_> = include_dir!("example/src/dist/cables-ui/js");
 
 struct Gain {
     params: Arc<GainParams>,
@@ -22,7 +22,7 @@ enum Action {
     Init,
     SetSize { width: u32, height: u32 },
     SetGain { value: f32 },
-    PersistedStateForUI {},
+    RequestPersistedState {},
     SetKeyPresses { value: u32 },
 }
 
@@ -32,10 +32,10 @@ struct GainParams {
     #[id = "gain"]
     pub gain: FloatParam,
 
-    #[persist = "keyPresses"]
-    pub key_presses: Mutex<i32> ,
-
     gain_value_changed: Arc<AtomicBool>,
+
+    #[persist = "keyPresses"]
+    pub key_presses: Mutex<i32> ,     // uses parking_lot::Mutex
 }
 
 impl Default for Gain {
@@ -104,6 +104,7 @@ impl Plugin for Gain {
 
     const SAMPLE_ACCURATE_AUTOMATION: bool = true;
 
+
     type SysExMessage = ();
     type BackgroundTask = ();
 
@@ -112,6 +113,7 @@ impl Plugin for Gain {
     }
 
     fn editor(&mut self, _async_executor: AsyncExecutor<Self>) -> Option<Box<dyn Editor>> {
+
         let params = self.params.clone();
         let gain_value_changed = self.params.gain_value_changed.clone();
         let editor = WebViewEditor::new(HTMLSource::String(include_str!("dist/index.html")), (800, 600))
@@ -179,7 +181,7 @@ impl Plugin for Gain {
                                     "height": ctx.height.load(Ordering::Relaxed)
                                 }));
                             }
-                            Action::PersistedStateForUI {} => {
+                            Action::RequestPersistedState {} => {
                                 // need to do one by one, as our params are wrapped in Arc
                                 ctx.send_json(json!({
                                     "type": "param_change",
@@ -190,13 +192,14 @@ impl Plugin for Gain {
                                 ctx.send_json(json!({
                                     "type": "persisted",
                                     "name": "keyPresses",
-                                    "value": params.key_presses,
+                                    "value": *params.key_presses.lock(),
                                     "text": "key presses:"
                                 }));
                             }
                             Action::SetKeyPresses { value } => {
                                 nih_log!("KeyPresses: {}", value);
-                                params.key_presses.set(value as i32).unwrap();
+                                // uses parking lot for mutex handling
+                                *params.key_presses.lock() = value as i32;
                             }
                         }
                     } else {
