@@ -1,16 +1,32 @@
 use std::path::{Path, PathBuf};
+use std::process::Command;
 use fs_extra::dir::{copy, CopyOptions};
 
 fn main() -> nih_plug_xtask::Result<()> {
+
+    // Step 1: Call the pre-build.js script
+    let status = Command::new("node")
+        .arg(" ../../ui/scripts/pre-build.js") // Path to (pre) vite build script from example folder
+        .status()
+        .expect("Failed to execute the pre-build.js script");
+
+    if !status.success() {
+        eprintln!("pre-build.js script failed to run.");
+        std::process::exit(status.code().unwrap_or(1));
+    }
+
+    println!("Successfully executed pre-build.js");
+
+    // now bundle!
     nih_plug_xtask::main().expect("Failed to build bundles!");
 
-    // Relative paths from the project root (where your Cargo.toml for xtask is):
+    // Relative paths from the project root
     let clap_bundle_source: PathBuf = ["target", "bundled", "gain.clap"].iter().collect();
     let vst3_bundle_source: PathBuf = ["target", "bundled", "gain.vst3"].iter().collect();
-    let clap_destination = Path::new("/Library/Audio/Plug-Ins/CLAP"); // Or your preferred location
-    let vst3_destination = Path::new("/Library/Audio/Plug-Ins/VST3"); // Or your preferred location
+    // MacOS: copy the bundles to library - make sure these folders actually exist
+    let clap_destination = Path::new("/Library/Audio/Plug-Ins/CLAP");
+    let vst3_destination = Path::new("/Library/Audio/Plug-Ins/VST3");
 
-    // Use fs_extra to copy directories:
     let mut options = CopyOptions::new();
     options.overwrite = true; // Or handle existing files differently
     copy(clap_bundle_source, clap_destination, &options)?;

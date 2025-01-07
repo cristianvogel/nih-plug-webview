@@ -6,10 +6,10 @@
         console.log("loading cables...");
         document.addEventListener("CABLES.jsLoaded", function (event) {
             CABLES.patch = new CABLES.Patch({
-                patchFile: "cables-ui/js/cables-ui.json",
-                prefixAssetPath: "/assets/",
-                assetPath: "/assets/",
-                jsPath: "js/",
+                patchFile: "webview://cables-ui/js/cables-ui.json",
+                prefixAssetPath: "webview://cables-ui",
+                assetPath: "webview://cables-ui/assets/",
+                jsPath: "webview://cables-ui/js/",
                 glCanvasId: "glcanvas",
                 glCanvasResizeToWindow: true,
                 onError: (e) => console.error(e),
@@ -27,6 +27,6 @@
     });
 </script>
 
-<canvas id="glcanvas" width="100vw" height="100vh" willReadFrequently="true">
+<canvas id="glcanvas" width="400px" height="400px" >
 
 </canvas>

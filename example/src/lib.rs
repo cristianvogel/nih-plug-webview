@@ -1,4 +1,4 @@
-
+use std::borrow::Cow;
 // Forked and modified from: https://github.com/robbert-vdh/nih-plug/tree/master/plugins/examples/gain
 use nih_plug::prelude::*;
 use nih_plug_webview::*;
@@ -10,7 +10,7 @@ use parking_lot::Mutex;
 use include_dir::{include_dir, Dir};
 use nih_plug_webview::http::Response;
 
-static WEB_ASSETS: Dir<'_> = include_dir!("example/src/dist/cables-ui/js");
+static WEB_ASSETS: Dir<'_> = include_dir!("example/src/dist/cables-ui");
 
 struct Gain {
     params: Arc<GainParams>,
@@ -118,8 +118,8 @@ impl Plugin for Gain {
         let gain_value_changed = self.params.gain_value_changed.clone();
         let editor = WebViewEditor::new(HTMLSource::String(include_str!("dist/index.html")), (800, 600))
             .with_custom_protocol("webview".to_owned(), |req| {
-                if let Some(file) = WEB_ASSETS.get_file(req.uri().path().trim_start_matches("/")) {
-                    return Response::builder()
+                return if let Some(file) = WEB_ASSETS.get_file(req.uri().path().trim_start_matches("/")) {
+                    Response::builder()
                         .header(
                             "content-type",
                             match file.path().extension().unwrap().to_str().unwrap() {
@@ -127,14 +127,20 @@ impl Plugin for Gain {
                                 "css" => "text/css",
                                 "ttf" => "font/ttf",
                                 "json" => "application/json",
+                                "png" => "image/png",
                                 _ => "",
                             },
                         )
                         .header("Access-Control-Allow-Origin", "*")
                         .body(file.contents().into())
-                        .map_err(Into::into);
+                        .map_err(Into::into)
+                } else {
+                    Response::builder()
+                        .status(404)
+                        .header("Custom", "Not Found")
+                        .body(Cow::from("Not Found".as_bytes()))
+                        .map_err(Into::into)
                 }
-                panic!("Web asset not found.")
             })
             .with_background_color((150, 150, 150, 255))
             .with_developer_mode(true)
