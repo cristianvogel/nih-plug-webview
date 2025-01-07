@@ -126,6 +126,7 @@ impl Plugin for Gain {
                                 "js" => "text/javascript",
                                 "css" => "text/css",
                                 "ttf" => "font/ttf",
+                                "json" => "application/json",
                                 _ => "",
                             },
                         )
